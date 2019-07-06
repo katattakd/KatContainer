@@ -1,7 +1,7 @@
 ### Note: This script REQUIRES that the host system has an x86_64 CPU and a recent Linux kernel!
 ## Support for more architectures may be added later on, but this script will likely stay Linux-only.
 
-### Note: You will need coreutils du, bash, jq, wget, sudo, and tar to run this script.
+### Note: You will need coreutils, bash, jq, wget, sudo, and tar to run this script.
 ## Busybox may work instead of coreutils, but I haven't tested it yet.
 
 ### General configuration
@@ -53,9 +53,6 @@ export DEFAULT_MAX_THREADS="1024"
 ## Note: The /home directory can't be read or written to by processes in the container. However, if you make folders/files inside the home folder, and chown them with the UID 1000, then the container processes will be able to read and write to those files.
 
 ## Note: The bootstrap process uses a shared cache, to reduce bandwidth usage when managing many containers.
-
-export DEFAULT_MIRROR="http://mirror.leaseweb.com/alpine"
-
 
 ### End configuration
 
