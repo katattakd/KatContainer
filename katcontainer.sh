@@ -1,8 +1,7 @@
 ### Note: This script REQUIRES that the host system has an x86_64 CPU and a recent Linux kernel!
 ## Support for more architectures may be added later on, but this script will likely stay Linux-only.
 
-### Note: You will need coreutils, bash, jq, wget, sudo, and tar to run this script.
-## Busybox may work instead of coreutils, but I haven't tested it yet.
+### Note: You will need coreutils/busybox, bash, jq, wget, sudo, and tar to run this script.
 
 ### General configuration
 
@@ -61,7 +60,7 @@ list_cache () {
 		echo "Cache sizes:"
 		cd $CACHE_DIR
 		for CACHE_FOLDER in *; do
-			sudo du -sbhPx $CACHE_FOLDER
+			sudo du -shx $CACHE_FOLDER
 		done
 	fi
 }
@@ -73,7 +72,7 @@ list_containers () {
 		for CONTAINER_FOLDER in *; do
 			export VERSION=$(cat $CONTAINER_FOLDER/.version)
 			sudo printf "$VERSION	"
-			sudo du -sbhPx $CONTAINER_FOLDER
+			sudo du -shx $CONTAINER_FOLDER
 		done
 	else
 		echo "It looks like you don't have any containers configured. Try creating one with this script's \"add\" command."
@@ -460,6 +459,18 @@ generate_config () {
 					\"nosuid\",
 					\"noexec\",
 					\"nodev\",
+					\"ro\"
+				]
+			},
+			{
+				\"destination\": \"/sys/fs/cgroup\",
+				\"type\": \"cgroup\",
+				\"source\": \"cgroup\",
+				\"options\": [
+					\"nosuid\",
+					\"noexec\",
+					\"nodev\",
+					\"relatime\",
 					\"ro\"
 				]
 			},
