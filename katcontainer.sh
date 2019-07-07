@@ -131,15 +131,16 @@ update_container () {
 	echo "Updating container filesystem..."
 	sudo rm etc/apk/repositories
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
-	sudo $CACHE_DIR/apk/sbin/apk.static -q --no-progress -X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk update
-	sudo $CACHE_DIR/apk/sbin/apk.static -q -X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk upgrade
+
+	sudo $CACHE_DIR/apk/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk update
+	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk upgrade
 	if [ ! -z "$ADD_PACKAGES" ]; then
 		echo "Adding $ADD_PACKAGES to container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q -X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk add $ADD_PACKAGES
+		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk add $ADD_PACKAGES
 	fi
 	if [ ! -z "$DEL_PACKAGES" ]; then
 		echo "Deleting $DEL_PACKAGES from container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q -X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk del $DEL_PACKAGES
+		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk del $DEL_PACKAGES
 	fi
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 	sudo chown -hR root home
@@ -317,6 +318,11 @@ download_apk_tools () {
 		rm .??*
 		rm sbin/apk.static.*
 	fi
+	# Necessary for using APK-tools
+	export MIRROR_CMD="-X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community"
+	if [ $FINAL_VERSION == "edge" ]; then
+		export MIRROR_CMD="$MIRROR_CMD -X $MIRROR/$FINAL_VERSION/testing"
+	fi
 }
 
 init_container () {
@@ -327,7 +333,7 @@ init_container () {
 		exit
 	fi
 	echo "Installing container filesystem..."
-	sudo $CACHE_DIR/apk/sbin/apk.static -q -X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk --initdb add $PACKAGES
+	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk --initdb add $PACKAGES
 	if [ $? -eq 1 ]; then
 		echo "Unable to install chroot filesystem!"
 		exit
