@@ -97,15 +97,16 @@ run_container () {
 	if [ "$USE_NATIVE_RUNC" = "false" ]; then
 		download_crun
 	fi
-	echo "Running container \"$CONTAINER_NAME\"..."
 	cd $CONTAINERS_DIR/$CONTAINER_NAME
 	if [ $? -eq 1 ]; then
 		echo "Unable to open container directory!"
 		exit
 	fi
 	if [ "$USE_NATIVE_RUNC" = "true" ]; then
+		echo "Running container \"$CONTAINER_NAME\" with runc..."
 		sudo runc run $CONTAINER_ID
 	else
+		echo "Running container \"$CONTAINER_NAME\"..."
 		sudo $CACHE_DIR/crun/crun run $CONTAINER_ID
 	fi
 }
