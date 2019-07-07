@@ -13,6 +13,9 @@ export CACHE_DIR="$PWD/.cache"
 
 export CONTAINER_ID="$CONTAINER_NAME-$((1 + RANDOM % 1000))"
 export CRUN_DOWNLOAD="https://kittyhacker101.tk/Static/crun"
+## If crun fails due to kernel-specific issues, runc can be used instead.
+## Note that runc uses more system resources than crun, and you will have to install it manually.
+export USE_NATIVE_RUNC=false
 
 ### Container creation config
 
@@ -91,14 +94,20 @@ del_container () {
 }
 
 run_container () {
-	download_crun
+	if [ "$USE_NATIVE_RUNC" = "false" ]; then
+		download_crun
+	fi
 	echo "Running container \"$CONTAINER_NAME\"..."
 	cd $CONTAINERS_DIR/$CONTAINER_NAME
 	if [ $? -eq 1 ]; then
 		echo "Unable to open container directory!"
 		exit
 	fi
-	sudo $CACHE_DIR/crun/crun run $CONTAINER_ID
+	if [ "$USE_NATIVE_RUNC" = "true" ]; then
+		sudo runc run $CONTAINER_ID
+	else
+		sudo $CACHE_DIR/crun/crun run $CONTAINER_ID
+	fi
 }
 
 add_container () {
@@ -459,18 +468,6 @@ generate_config () {
 					\"nosuid\",
 					\"noexec\",
 					\"nodev\",
-					\"ro\"
-				]
-			},
-			{
-				\"destination\": \"/sys/fs/cgroup\",
-				\"type\": \"cgroup\",
-				\"source\": \"cgroup\",
-				\"options\": [
-					\"nosuid\",
-					\"noexec\",
-					\"nodev\",
-					\"relatime\",
 					\"ro\"
 				]
 			},
