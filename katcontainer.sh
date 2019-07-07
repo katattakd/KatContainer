@@ -39,7 +39,7 @@ export DEFAULT_CONSOLE_HEIGHT="25"
 #export DEFAULT_CONSOLE_WIDTH="102"
 #export DEFAULT_CONSOLE_HEIGHT="38"
 
-export DEFAULT_ARGS="\"sh\", \"-l\""
+export DEFAULT_ARGS="sh -l"
 
 export CAPABILITIES="\"CAP_AUDIT_WRITE\", \"CAP_KILL\", \"CAP_NET_BIND_SERVICE\""
 export DEFAULT_READ_ONLY_ROOT="false"
@@ -338,6 +338,7 @@ configure_container () {
 	echo "Finishing up..."
 	sudo mkdir -p home root
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
+	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
 	sudo cp $RESOLV_CONF etc/resolv.conf
@@ -365,7 +366,7 @@ generate_config () {
 				\"gid\": 0
 			},
 			\"args\": [
-				$ARGS
+				\"sh\", \"/init.sh\"
 			],
 			\"env\": [
 				\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",
