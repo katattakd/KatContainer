@@ -1,4 +1,4 @@
-### Note: This script REQUIRES that the host system has an x86_64 CPU and a recent Linux kernel!
+### Note: This script REQUIRES that the host system has a CPU architecture supported by Alpine Linux, and a recent Linux kernel!
 ## Support for more architectures may be added later on, but this script will likely stay Linux-only.
 
 ### Note: You will need coreutils/busybox, bash, jq, wget, sudo, and tar to run this script.
@@ -8,6 +8,9 @@
 export CONTAINERS_DIR="$PWD/.containers"
 export CONTAINER_NAME="$2"
 export CACHE_DIR="$PWD/.cache"
+## This MUST be an architecture the container host is capable of running natively (You can use x86 as the ARCH on an x86_64 system, but you can't use ARM as the ARCH on an x86_64 system).
+## Note: If the host can't run 64-bit x86 binaries, you will have to enable USE_NATIVE_RUNC, in order for you to be able to start containers
+export ARCH="x86_64"
 
 ### Container management config
 
@@ -132,15 +135,15 @@ update_container () {
 	sudo rm etc/apk/repositories
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
 
-	sudo $CACHE_DIR/apk/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk update
-	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk upgrade
+	sudo $CACHE_DIR/apk/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk update
+	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk upgrade
 	if [ ! -z "$ADD_PACKAGES" ]; then
 		echo "Adding $ADD_PACKAGES to container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk add $ADD_PACKAGES
+		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk add $ADD_PACKAGES
 	fi
 	if [ ! -z "$DEL_PACKAGES" ]; then
 		echo "Deleting $DEL_PACKAGES from container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk del $DEL_PACKAGES
+		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk del $DEL_PACKAGES
 	fi
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 	sudo chown -hR root home
@@ -304,7 +307,7 @@ download_apk_tools () {
 		echo "Unable to open cache directory!"
 		exit
 	fi
-	wget -nc $MIRROR/$BOOTSTRAP_VERSION/main/x86_64/apk-tools-static-$BOOTSTRAP_VERSION_APK_TOOLS.apk &> /dev/null
+	wget -nc $MIRROR/$BOOTSTRAP_VERSION/main/$ARCH/apk-tools-static-$BOOTSTRAP_VERSION_APK_TOOLS.apk &> /dev/null
 	if [ $? -eq 1 ]; then
 		echo "Unable to download apk-tools!"
 		exit
@@ -333,7 +336,7 @@ init_container () {
 		exit
 	fi
 	echo "Installing container filesystem..."
-	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch x86_64 --cache-dir $CACHE_DIR/apk --initdb add $PACKAGES
+	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk --initdb add $PACKAGES
 	if [ $? -eq 1 ]; then
 		echo "Unable to install chroot filesystem!"
 		exit
