@@ -25,7 +25,7 @@ export USE_NATIVE_RUNC=false
 ## Note: It's recommended that you set the mirror to the one with the lowest ping.
 export DEFAULT_MIRROR="http://dl-cdn.alpinelinux.org/alpine"
 export BOOTSTRAP_VERSION="v3.10"
-export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r1"
+export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r2"
 
 export DEFAULT_VERSION="v3.10"
 ## All you need for a functional container. Package management is handled by the script, so having a package manager installed in the container isn't necessary.
@@ -566,7 +566,7 @@ generate_config () {
 				\"/proc/sysrq-trigger\"
 			]
 		}
-	}" | jq --tab -M > $CONTAINERS_DIR/$CONTAINER_NAME/config.json
+	}" | jq --tab -M . > $CONTAINERS_DIR/$CONTAINER_NAME/config.json
 }
 
 if [ "$1" == "add" ]; then
@@ -626,7 +626,7 @@ elif [ "$1" == "edit" ]; then
 		cp $CONTAINERS_DIR/$CONTAINER_NAME/config.json $CONTAINERS_DIR/$CONTAINER_NAME/config_new.json
 	fi
 	nano $CONTAINERS_DIR/$CONTAINER_NAME/config_new.json
-	cat $CONTAINERS_DIR/$CONTAINER_NAME/config_new.json | jq --tab -M > $CONTAINERS_DIR/$CONTAINER_NAME/config_new.fmt.json
+	cat $CONTAINERS_DIR/$CONTAINER_NAME/config_new.json | jq --tab -M . > $CONTAINERS_DIR/$CONTAINER_NAME/config_new.fmt.json
 	if [ ! $? -eq 0 ]; then
 		rm $CONTAINERS_DIR/$CONTAINER_NAME/config_new.fmt.json $CONTAINERS_DIR/$CONTAINER_NAME/config_new.json
 		echo "Unable to parse configuration! All changes have been discarded."
