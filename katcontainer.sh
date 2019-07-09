@@ -276,7 +276,6 @@ get_update_settings () {
 	export DEL_PACKAGES
 }
 
-# TODO: Update this to work with crun
 download_crun () {
 	mkdir -p $CACHE_DIR/crun
 	cd $CACHE_DIR/crun
