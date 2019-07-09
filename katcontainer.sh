@@ -34,7 +34,6 @@ export DEFAULT_PACKAGES="busybox"
 #export DEFAULT_PACKAGES="alpine-base alpine-sdk bash byobu htop curl wget nano busybox-extras python"
 
 export DEFAULT_HOSTNAME="alpine"
-export DEFAULT_RESOLV="/etc/resolv.conf"
 ## Default console width, works with basically all resoultions.
 export DEFAULT_CONSOLE_WIDTH="80"
 export DEFAULT_CONSOLE_HEIGHT="25"
@@ -181,13 +180,6 @@ get_settings () {
 		export HOSTNAME="$DEFAULT_HOSTNAME"
 	fi
 	export HOSTNAME
-
-	echo -n "DNS config [$DEFAULT_RESOLV]: "
-	read RESOLV_CONF
-	if [ -z "$RESOLV_CONF" ]; then
-		export RESOLV_CONF="$DEFAULT_RESOLV"
-	fi
-	export RESOLV_CONF
 
 	echo -n "Read-only root [$DEFAULT_READ_ONLY_ROOT]: "
 	read READ_ONLY_ROOT
@@ -350,7 +342,6 @@ configure_container () {
 	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
-	sudo cp $RESOLV_CONF etc/resolv.conf
 	sudo -E bash -c 'printf "$HOSTNAME" > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 	sudo chown -hR root home
@@ -491,6 +482,19 @@ generate_config () {
 					\"noatime\",
 					\"mode=755\",
 					\"size=$MAX_TMP_MEM\"
+				]
+			},
+			{
+				\"destination\": \"/etc/resolv.conf\",
+				\"type\": \"bind\",
+				\"source\": \"/etc/resolv.conf\",
+				\"options\": [
+					\"ro\",
+					\"rbind\",
+					\"rprivate\",
+					\"nosuid\",
+					\"noexec\",
+					\"nodev\"
 				]
 			}
 		],
