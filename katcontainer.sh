@@ -1,24 +1,18 @@
-### Note: This script REQUIRES that the host system has a CPU architecture supported by Alpine Linux, and a recent Linux kernel!
-## Support for more architectures may be added later on, but this script will likely stay Linux-only.
-
-### Note: You will need coreutils/busybox, bash, jq, wget, sudo, and tar to run this script.
+#!/bin/sh
+set -euo pipefail
+### Note: You will need coreutils/busybox, bash, jq, runc, wget, sudo, and tar to run this script.
 
 ### General configuration
 
-export CONTAINERS_DIR="$PWD/.containers"
+export CONTAINERS_DIR="$PWD/containers"
 export CONTAINER_NAME="$2"
-export CACHE_DIR="$PWD/.cache"
+export CACHE_DIR="$PWD/cache"
 ## This MUST be an architecture the container host is capable of running natively (You can use x86 as the ARCH on an x86_64 system, but you can't use ARM as the ARCH on an x86_64 system).
-## Note: If the host can't run 64-bit x86 binaries, you will have to enable USE_NATIVE_RUNC, in order for you to be able to start containers
 export ARCH="x86_64"
 
 ### Container management config
 
 export CONTAINER_ID="$CONTAINER_NAME-$((1 + RANDOM % 1000))"
-export CRUN_DOWNLOAD="https://kittyhacker101.tk/Static/crun"
-## If crun fails due to kernel-specific issues, runc can be used instead.
-## Note that runc uses more system resources than crun, and you will have to install it manually.
-export USE_NATIVE_RUNC=false
 
 ### Container creation config
 
@@ -42,21 +36,18 @@ export DEFAULT_CONSOLE_HEIGHT="25"
 #export DEFAULT_CONSOLE_HEIGHT="38"
 
 export DEFAULT_ARGS="sh -l"
-
-export CAPABILITIES="\"CAP_AUDIT_WRITE\", \"CAP_KILL\", \"CAP_NET_BIND_SERVICE\""
 export DEFAULT_READ_ONLY_ROOT="false"
 
 export DEFAULT_MAX_MEM_MB="100"
 export DEFAULT_MAX_TMP_MEM_MB="250"
 
-export DEFAULT_ASSIGNED_CPUS="0-3"
+export DEFAULT_ASSIGNED_CPUS="0-$(cat /proc/cpuinfo | grep siblings -m 1 | busybox awk '{ printf $3-1 }')"
 
 export DEFAULT_MAX_FILE_DESC="1024"
 export DEFAULT_MAX_THREADS="1024"
+export DEFAULT_MAX_PENDING_SIGNALS="8192"
 
-## Note: The /home directory can't be read or written to by processes in the container. However, if you make folders/files inside the home folder, and chown them with the UID 1000, then the container processes will be able to read and write to those files.
-
-## Note: The bootstrap process uses a shared cache, to reduce bandwidth usage when managing many containers.
+## Note: The bootstrap and update process uses a shared cache, to reduce bandwidth usage when managing many containers.
 
 ### End configuration
 
@@ -96,21 +87,13 @@ del_container () {
 }
 
 run_container () {
-	if [ "$USE_NATIVE_RUNC" = "false" ]; then
-		download_crun
-	fi
 	cd $CONTAINERS_DIR/$CONTAINER_NAME
 	if [ $? -eq 1 ]; then
 		echo "Unable to open container directory!"
 		exit
 	fi
-	if [ "$USE_NATIVE_RUNC" = "true" ]; then
-		echo "Running container \"$CONTAINER_NAME\" with runc..."
-		sudo runc run $CONTAINER_ID
-	else
-		echo "Running container \"$CONTAINER_NAME\"..."
-		sudo $CACHE_DIR/crun/crun run $CONTAINER_ID
-	fi
+	echo "Running container \"$CONTAINER_NAME\"..."
+	sudo runc run $CONTAINER_ID
 }
 
 add_container () {
@@ -133,20 +116,18 @@ update_container () {
 	echo "Updating container filesystem..."
 	sudo rm etc/apk/repositories
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
-
-	sudo $CACHE_DIR/apk/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk update
-	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk upgrade
+	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-$ARCH
+	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH update
+	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH upgrade
 	if [ ! -z "$ADD_PACKAGES" ]; then
 		echo "Adding $ADD_PACKAGES to container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk add $ADD_PACKAGES
+		sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH add $ADD_PACKAGES
 	fi
 	if [ ! -z "$DEL_PACKAGES" ]; then
 		echo "Deleting $DEL_PACKAGES from container..."
-		sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk del $DEL_PACKAGES
+		sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH del $DEL_PACKAGES
 	fi
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
-	sudo chown -hR root home
-	sudo chmod -R 711 home
 	echo "Container updated!"
 }
 
@@ -230,6 +211,13 @@ get_settings () {
 	fi
 	export MAX_THREADS
 
+	echo -n "Max pending signals [$DEFAULT_MAX_PENDING_SIGNALS]: "
+	read MAX_PENDING_SIGNALS
+	if [ -z "$MAX_PENDING_SIGNALS" ]; then
+		export MAX_PENDING_SIGNALS="$DEFAULT_MAX_PENDING_SIGNALS"
+	fi
+	export MAX_PENDING_SIGNALS
+
 	echo -n "Console width [$DEFAULT_CONSOLE_WIDTH]: "
 	read CONSOLE_WIDTH
 	if [ -z "$CONSOLE_WIDTH" ]; then
@@ -276,41 +264,27 @@ get_update_settings () {
 	export DEL_PACKAGES
 }
 
-download_crun () {
-	mkdir -p $CACHE_DIR/crun
-	cd $CACHE_DIR/crun
-	if [ $? -eq 1 ]; then
-		echo "Unable to open cache directory!"
-		exit
-	fi
-	wget -nc $CRUN_DOWNLOAD -O crun &> /dev/null
-	sudo chmod +x crun
-	if [ $? -eq 1 ]; then
-		echo "Unable to download crun!"
-		exit
-	fi
-}
-
 download_apk_tools () {
-	mkdir -p $CACHE_DIR/apk
-	cd $CACHE_DIR/apk
+	mkdir -p $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH
+	cd $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH
 	if [ $? -eq 1 ]; then
 		echo "Unable to open cache directory!"
-		exit
-	fi
-	wget -nc $MIRROR/$BOOTSTRAP_VERSION/main/$ARCH/apk-tools-static-$BOOTSTRAP_VERSION_APK_TOOLS.apk &> /dev/null
-	if [ $? -eq 1 ]; then
-		echo "Unable to download apk-tools!"
 		exit
 	fi
 	if [ ! -d "sbin" ]; then
-		tar -xzf $CACHE_DIR/apk/apk-tools-static-*.apk &> /dev/null
+		wget -nc $MIRROR/$BOOTSTRAP_VERSION/main/$ARCH/apk-tools-static-$BOOTSTRAP_VERSION_APK_TOOLS.apk &> /dev/null
+		if [ $? -eq 1 ]; then
+			echo "Unable to download apk-tools!"
+			exit
+		fi
+		tar -xzf $PWD/apk-tools-static-*.apk &> /dev/null
 		if [ $? -eq 1 ]; then
 			echo "Unable to extract apk-tools!"
 			exit
 		fi
 		rm .??*
 		rm sbin/apk.static.*
+		rm *.apk
 	fi
 	# Necessary for using APK-tools
 	export MIRROR_CMD="-X $MIRROR/$FINAL_VERSION/main -X $MIRROR/$FINAL_VERSION/community"
@@ -327,7 +301,8 @@ init_container () {
 		exit
 	fi
 	echo "Installing container filesystem..."
-	sudo $CACHE_DIR/apk/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk --initdb add $PACKAGES
+	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-$ARCH
+	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH --initdb add $PACKAGES
 	if [ $? -eq 1 ]; then
 		echo "Unable to install chroot filesystem!"
 		exit
@@ -336,18 +311,15 @@ init_container () {
 
 configure_container () {
 	echo "Finishing up..."
-	sudo mkdir -p home root
+	sudo mkdir -p root
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
 	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
 	sudo -E bash -c 'printf "$HOSTNAME" > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
-	sudo chown -hR root home
-	sudo chmod -R 711 home
 }
 
-# TODO: Figure out why the UID remapping namespace was causing container launches to fail, and fix the issue.
 generate_config () {
 	let MAX_MEM=$MAX_MEM_MB*1000000
 	export MAX_TMP_MEM=$MAX_TMP_MEM_MB"m"
@@ -375,22 +347,32 @@ generate_config () {
 			\"cwd\": \"/root\",
 			\"capabilities\": {
 				\"bounding\": [
-					$CAPABILITIES
+					\"CAP_AUDIT_WRITE\"
 				],
 				\"effective\": [
-					$CAPABILITIES
+					\"CAP_AUDIT_WRITE\"
 				],
 				\"inheritable\": [
-					$CAPABILITIES
+					\"CAP_AUDIT_WRITE\"
 				],
 				\"permitted\": [
-					$CAPABILITIES
+					\"CAP_AUDIT_WRITE\"
 				],
 				\"ambient\": [
-					$CAPABILITIES
+					\"CAP_AUDIT_WRITE\"
 				]
 			},
 			\"rlimits\": [
+				{
+					\"type\": \"RLIMIT_CORE\",
+					\"hard\": 0,
+					\"soft\": 0
+				},
+				{
+					\"type\": \"RLIMIT_NICE\",
+					\"hard\": 0,
+					\"soft\": 0
+				},
 				{
 					\"type\": \"RLIMIT_NOFILE\",
 					\"hard\": $MAX_FILE_DESC,
@@ -400,12 +382,18 @@ generate_config () {
 					\"type\": \"RLIMIT_NPROC\",
 					\"hard\": $MAX_THREADS,
 					\"soft\": $MAX_THREADS
+				},
+				{
+					\"type\": \"RLIMIT_SIGPENDING\",
+					\"hard\": $MAX_PENDING_SIGNALS,
+					\"soft\": $MAX_PENDING_SIGNALS
 				}
 			],
+			\"oomScoreAdj\": 1000,
 			\"noNewPrivileges\": true
 		},
 		\"root\": {
-			\"path\": \"$CONTAINERS_DIR/$CONTAINER_NAME/rootfs\",
+			\"path\": \"rootfs\",
 			\"readonly\": $READ_ONLY_ROOT
 		},
 		\"hostname\": \"$HOSTNAME\",
@@ -506,9 +494,11 @@ generate_config () {
 					\"limit\": $MAX_MEM,
 					\"reservation\": $MAX_MEM,
 					\"swap\": $MAX_MEM,
-					\"kernel\": -1,
-					\"kerneltcp\": -1,
-					\"swappiness\": 0
+					\"kernel\": $MAX_MEM,
+					\"kerneltcp\": $MAX_MEM
+				},
+				\"pids\": {
+					\"limit\": $MAX_THREADS
 				},
 				\"devices\": [
 					{
@@ -521,14 +511,14 @@ generate_config () {
 				{
 					\"containerID\": 0,
 					\"hostID\": 1000,
-					\"size\": 32000
+					\"size\": 1
 				}
 			],
 			\"gidMappings\": [
 				{
 					\"containerID\": 0,
 					\"hostID\": 1000,
-					\"size\": 32000
+					\"size\": 1
 				}
 			],
 			\"namespaces\": [
@@ -552,6 +542,9 @@ generate_config () {
 				}
 			],
 			\"maskedPaths\": [
+				\"/proc/acpi\",
+				\"/proc/asound\",
+				\"/proc/keys\",
 				\"/proc/kcore\",
 				\"/proc/latency_stats\",
 				\"/proc/timer_list\",
@@ -561,7 +554,6 @@ generate_config () {
 				\"/proc/scsi\"
 			],
 			\"readonlyPaths\": [
-				\"/proc/asound\",
 				\"/proc/bus\",
 				\"/proc/fs\",
 				\"/proc/irq\",
