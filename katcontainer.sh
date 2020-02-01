@@ -104,9 +104,9 @@ chroot_container () {
 		echo "Unable to open container directory!"
 		exit
 	fi
-	echo "WARNING: You are running in chroot mode. The container will have easy access to the host system!" 
+	echo "WARNING: You are running in chroot mode. Things may be a bit buggy, and the container has full access to the host system." 
 	echo "Running container \"$CONTAINER_NAME\"..."
-	sudo arch-chroot rootfs sh /init.sh
+	sudo arch-chroot rootfs /bin/busybox sh
 }
 
 add_container () {
@@ -674,7 +674,7 @@ elif [ "$1" == "help" ]; then
 	echo "update [container name] - Updates a container's installed packages, and allows you to add or remove packages."
 	echo "edit [container name] - Allows you to edit a container's underlying configuration. Container configuration is in OCI format."
 	echo "run [container name] - Securely runs a container."
-	echo "chroot [container name] - Runs a container with no sandboxing from the host system."
+	echo "chroot [container name] - Runs a container with no sandboxing from the host system. May be useful for troubleshooting issues."
 	echo "list - Lists all configured containers, and displays the cache size."
 	echo "clean - Empties all caches used by the script."
 else
