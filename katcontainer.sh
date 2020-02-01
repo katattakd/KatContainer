@@ -1,5 +1,4 @@
 #!/bin/sh
-set -euo pipefail
 ### Note: You will need coreutils/busybox, bash, jq, runc, wget, sudo, and tar to run this script.
 
 ### General configuration
@@ -8,7 +7,7 @@ export CONTAINERS_DIR="$PWD/containers"
 export CONTAINER_NAME="$2"
 export CACHE_DIR="$PWD/cache"
 ## This MUST be an architecture the container host is capable of running natively (You can use x86 as the ARCH on an x86_64 system, but you can't use ARM as the ARCH on an x86_64 system).
-export ARCH="x86_64"
+export DEFAULT_ARCH="x86_64"
 
 ### Container management config
 
@@ -18,14 +17,14 @@ export CONTAINER_ID="$CONTAINER_NAME-$((1 + RANDOM % 1000))"
 
 ## Note: It's recommended that you set the mirror to the one with the lowest ping.
 export DEFAULT_MIRROR="http://dl-cdn.alpinelinux.org/alpine"
-export BOOTSTRAP_VERSION="v3.10"
-export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r2"
+export BOOTSTRAP_VERSION="v3.11"
+export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r3"
 
-export DEFAULT_VERSION="v3.10"
+export DEFAULT_VERSION="v3.11"
 ## All you need for a functional container. Package management is handled by the script, so having a package manager installed in the container isn't necessary.
 export DEFAULT_PACKAGES="busybox"
 ## The below list of packages is useful for developing containers, but it's recommended that you use as few dependencies as possible for your finished container.
-#export DEFAULT_PACKAGES="alpine-base alpine-sdk bash byobu htop curl wget nano busybox-extras python"
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk bash byobu htop curl wget nano busybox-extras python perl autoconf cmake"
 
 export DEFAULT_HOSTNAME="alpine"
 ## Default console width, works with basically all resoultions.
@@ -38,10 +37,10 @@ export DEFAULT_CONSOLE_HEIGHT="25"
 export DEFAULT_ARGS="sh -l"
 export DEFAULT_READ_ONLY_ROOT="false"
 
-export DEFAULT_MAX_MEM_MB="100"
-export DEFAULT_MAX_TMP_MEM_MB="250"
+export DEFAULT_MAX_MEM_MB="512"
+export DEFAULT_MAX_TMP_MEM_MB="128"
 
-export DEFAULT_ASSIGNED_CPUS="0-$(cat /proc/cpuinfo | grep siblings -m 1 | busybox awk '{ printf $3-1 }')"
+export DEFAULT_ASSIGNED_CPUS="0-$(cat /proc/cpuinfo | grep siblings -m 1 | awk '{ printf $3-1 }')"
 
 export DEFAULT_MAX_FILE_DESC="1024"
 export DEFAULT_MAX_THREADS="1024"
@@ -50,6 +49,7 @@ export DEFAULT_MAX_PENDING_SIGNALS="8192"
 ## Note: The bootstrap and update process uses a shared cache, to reduce bandwidth usage when managing many containers.
 
 ### End configuration
+set -euo pipefail
 
 list_cache () {
 	if [ "$(ls $CACHE_DIR)" ]; then
@@ -116,7 +116,7 @@ update_container () {
 	echo "Updating container filesystem..."
 	sudo rm etc/apk/repositories
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
-	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-$ARCH
+	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-Mi
 	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH update
 	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH upgrade
 	if [ ! -z "$ADD_PACKAGES" ]; then
@@ -155,12 +155,12 @@ get_settings () {
 	fi
 	export PACKAGES
 
-	echo -n "Hostname [$DEFAULT_HOSTNAME]: "
-	read HOSTNAME
-	if [ -z "$HOSTNAME" ]; then
-		export HOSTNAME="$DEFAULT_HOSTNAME"
+	echo -n "CPU Architecture [$DEFAULT_ARCH]: "
+	read ARCH
+	if [ -z "$ARCH" ]; then
+		export ARCH="$DEFAULT_ARCH"
 	fi
-	export HOSTNAME
+	export ARCH
 
 	echo -n "Read-only root [$DEFAULT_READ_ONLY_ROOT]: "
 	read READ_ONLY_ROOT
@@ -236,6 +236,7 @@ get_settings () {
 get_update_settings () {
 	export DEFAULT_MIRROR=$(cat $CONTAINERS_DIR/$CONTAINER_NAME/.mirror)
 	export DEFAULT_VERSION=$(cat $CONTAINERS_DIR/$CONTAINER_NAME/.version)
+	export ARCH=$(cat $CONTAINERS_DIR/$CONTAINER_NAME/.arch)
 
 	echo "You will now choose the settings for updating your container's packages. Default options are in brackets, and can be chosen by pressing enter."
 
@@ -316,6 +317,7 @@ configure_container () {
 	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
+	printf "$ARCH" > ../.arch
 	sudo -E bash -c 'printf "$HOSTNAME" > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 }
