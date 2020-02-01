@@ -26,7 +26,6 @@ export DEFAULT_PACKAGES="busybox"
 ## The below list of packages is useful for developing containers, but it's recommended that you use as few dependencies as possible for your finished container.
 #export DEFAULT_PACKAGES="alpine-base alpine-sdk bash byobu htop curl wget nano busybox-extras python perl autoconf cmake"
 
-export DEFAULT_HOSTNAME="alpine"
 ## Default console width, works with basically all resoultions.
 export DEFAULT_CONSOLE_WIDTH="80"
 export DEFAULT_CONSOLE_HEIGHT="25"
@@ -116,7 +115,7 @@ update_container () {
 	echo "Updating container filesystem..."
 	sudo rm etc/apk/repositories
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
-	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-Mi
+	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-$ARCH
 	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q --no-progress $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH update
 	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH upgrade
 	if [ ! -z "$ADD_PACKAGES" ]; then
@@ -318,7 +317,7 @@ configure_container () {
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
 	printf "$ARCH" > ../.arch
-	sudo -E bash -c 'printf "$HOSTNAME" > etc/hostname'
+	sudo -E bash -c 'printf alpine" > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 }
 
@@ -398,7 +397,7 @@ generate_config () {
 			\"path\": \"rootfs\",
 			\"readonly\": $READ_ONLY_ROOT
 		},
-		\"hostname\": \"$HOSTNAME\",
+		\"hostname\": \"alpine\",
 		\"mounts\": [
 			{
 				\"destination\": \"/proc\",
