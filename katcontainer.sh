@@ -106,7 +106,7 @@ chroot_container () {
 	fi
 	echo "WARNING: You are running in chroot mode. The container will have easy access to the host system!" 
 	echo "Running container \"$CONTAINER_NAME\"..."
-	sudo arch-chroot rootfs
+	sudo arch-chroot rootfs sh /init.sh
 }
 
 add_container () {
@@ -325,7 +325,7 @@ init_container () {
 
 configure_container () {
 	echo "Finishing up..."
-	sudo mkdir -p root
+	sudo mkdir -p root sys run
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
 	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
