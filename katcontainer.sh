@@ -678,6 +678,6 @@ elif [ "$1" == "help" ]; then
 	echo "list - Lists all configured containers, and displays the cache size."
 	echo "clean - Empties all caches used by the script."
 else
-	echo "You must specify a valid command. Valid commands are \"help\", \"add\", \"del\", \"update\", \"edit\", \"run\", \"list\", and \"clean\"."
+	echo "You must specify a valid command. Valid commands are \"help\", \"add\", \"del\", \"update\", \"edit\", \"run\", \"chroot\", \"list\", and \"clean\"."
 	exit
 fi
