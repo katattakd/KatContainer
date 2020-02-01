@@ -317,7 +317,7 @@ configure_container () {
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
 	printf "$ARCH" > ../.arch
-	sudo -E bash -c 'printf alpine" > etc/hostname'
+	sudo -E bash -c 'printf alpine > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
 }
 
