@@ -67,8 +67,9 @@ list_containers () {
 		echo "Configured containers:"
 		cd $CONTAINERS_DIR
 		for CONTAINER_FOLDER in *; do
+			export ARCH=$(cat $CONTAINER_FOLDER/.arch)
 			export VERSION=$(cat $CONTAINER_FOLDER/.version)
-			sudo printf "$VERSION	"
+			sudo printf "$ARCH	$VERSION	"
 			sudo du -shx $CONTAINER_FOLDER
 		done
 	else
@@ -103,9 +104,9 @@ chroot_container () {
 		echo "Unable to open container directory!"
 		exit
 	fi
-	echo "WARNING: You are in chroot mode. The container will have easy access to the host system!" 
+	echo "WARNING: You are running in chroot mode. The container will have easy access to the host system!" 
 	echo "Running container \"$CONTAINER_NAME\"..."
-	sudo arch-chroot .
+	sudo arch-chroot rootfs
 }
 
 add_container () {
