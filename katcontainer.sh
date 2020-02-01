@@ -23,8 +23,10 @@ export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r3"
 export DEFAULT_VERSION="v3.11"
 ## All you need for a functional container. Package management is handled by the script, so having a package manager installed in the container isn't necessary.
 export DEFAULT_PACKAGES="busybox"
-## The below list of packages is useful for developing containers, but it's recommended that you use as few dependencies as possible for your finished container.
-#export DEFAULT_PACKAGES="alpine-base alpine-sdk bash byobu htop curl wget nano busybox-extras python perl autoconf cmake"
+## The minimum set of packages you need to build stuff in a container. You'll probably want more than this.
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk"
+## The below list of packages is useful for developing containers or building stuff in them, but it's recommended that you use as few dependencies as possible for your finished container.
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk coreutils bash byobu htop curl wget nano busybox-extras python perl autoconf cmake automake"
 
 ## Default console width, works with basically all resoultions.
 export DEFAULT_CONSOLE_WIDTH="80"
