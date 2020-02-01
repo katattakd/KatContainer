@@ -69,7 +69,7 @@ list_containers () {
 		for CONTAINER_FOLDER in *; do
 			export ARCH=$(cat $CONTAINER_FOLDER/.arch)
 			export VERSION=$(cat $CONTAINER_FOLDER/.version)
-			sudo printf "$ARCH	$VERSION	"
+			sudo printf "$VERSION	$ARCH	"
 			sudo du -shx $CONTAINER_FOLDER
 		done
 	else
