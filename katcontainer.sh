@@ -39,7 +39,7 @@ export DEFAULT_READ_ONLY_ROOT="false"
 export DEFAULT_MAX_MEM_MB="512"
 export DEFAULT_MAX_TMP_MEM_MB="128"
 
-export DEFAULT_ASSIGNED_CPUS="0-$(cat /proc/cpuinfo | grep siblings -m 1 | awk '{ printf $3-1 }')"
+export DEFAULT_ASSIGNED_CPUS="0-3"
 
 export DEFAULT_MAX_FILE_DESC="1024"
 export DEFAULT_MAX_THREADS="1024"
@@ -48,7 +48,7 @@ export DEFAULT_MAX_PENDING_SIGNALS="8192"
 ## Note: The bootstrap and update process uses a shared cache, to reduce bandwidth usage when managing many containers.
 
 ### End configuration
-set -euo pipefail
+#set -euo pipefail
 
 list_cache () {
 	if [ "$(ls $CACHE_DIR)" ]; then
