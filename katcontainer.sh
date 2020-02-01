@@ -1,5 +1,5 @@
 #!/bin/sh
-### Note: You will need coreutils/busybox, bash, jq, runc, wget, sudo, and tar to run this script.
+### Note: You will need coreutils/busybox, bash, jq, runc, wget, sudo, arch-chroot, and tar to run this script.
 
 ### General configuration
 
@@ -95,6 +95,17 @@ run_container () {
 	fi
 	echo "Running container \"$CONTAINER_NAME\"..."
 	sudo runc run $CONTAINER_ID
+}
+
+chroot_container () {
+	cd $CONTAINERS_DIR/$CONTAINER_NAME
+	if [ $? -eq 1 ]; then
+		echo "Unable to open container directory!"
+		exit
+	fi
+	echo "WARNING: You are in chroot mode. The container will have easy access to the host system!" 
+	echo "Running container \"$CONTAINER_NAME\"..."
+	sudo arch-chroot .
 }
 
 add_container () {
@@ -599,6 +610,17 @@ elif [ "$1" == "run" ]; then
 		exit
 	fi
 	run_container
+elif [ "$1" == "chroot" ]; then
+	if [ -z $CONTAINER_NAME ]; then
+		echo "You must specify a valid container."
+		list_containers
+		exit
+	fi
+	if [ ! -d "$CONTAINERS_DIR/$CONTAINER_NAME" ]; then
+		echo "Unable to find container!"
+		exit
+	fi
+	chroot_container
 elif [ "$1" == "update" ]; then
 	if [ -z $CONTAINER_NAME ]; then
 		echo "You must specify a valid container."
@@ -651,6 +673,7 @@ elif [ "$1" == "help" ]; then
 	echo "update [container name] - Updates a container's installed packages, and allows you to add or remove packages."
 	echo "edit [container name] - Allows you to edit a container's underlying configuration. Container configuration is in OCI format."
 	echo "run [container name] - Securely runs a container."
+	echo "chroot [container name] - Runs a container with no sandboxing from the host system."
 	echo "list - Lists all configured containers, and displays the cache size."
 	echo "clean - Empties all caches used by the script."
 else
