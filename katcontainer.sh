@@ -26,7 +26,7 @@ export DEFAULT_PACKAGES="busybox"
 ## The minimum set of packages you need to build stuff in a container. You'll probably want more than this.
 #export DEFAULT_PACKAGES="alpine-base alpine-sdk"
 ## The below list of packages is useful for developing containers or building stuff in them, but it's recommended that you use as few dependencies as possible for your finished container.
-#export DEFAULT_PACKAGES="alpine-base alpine-sdk coreutils bash byobu htop curl wget nano busybox-extras python perl autoconf cmake automake"
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk coreutils bash byobu htop curl wget nano busybox-extras python perl autoconf cmake automake libtool"
 
 ## Default console width, works with basically all resoultions.
 export DEFAULT_CONSOLE_WIDTH="80"
