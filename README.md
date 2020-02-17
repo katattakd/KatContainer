@@ -1,8 +1,8 @@
 # KatContainer
-A simple bash script that allows you to create and manage Alpine-linux based OCI containers.
+A Bash script that allows you to create and manage Alpine-linux based OCI containers.
 
 ### Hardware/software support
-This script only works on Linux, and will likely not be ported to other operating systems. If you are running this on a different architecuture, you will have to set the script's DEFAULT_ARCH configuration option to your desired architecture.
+This script only works on Linux, and will likely require modifications to work on other operating systems. If you are running this on a different architecuture, you will have to set the script's DEFAULT_ARCH configuration option to your desired architecture.
 
 #### Supported architectures
 - x86_64 (recommended)
@@ -21,7 +21,6 @@ You will need the commands included in coreutils, along with the following:
 - jq (for parsing OCI container configuration)
 - wget (for downloading dependencies the script requires)
 - sudo (for running some tasks as the root user)
-- tar (for extracting dependencies)
 
 ### Usage
 You can run the script like so:
