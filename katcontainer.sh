@@ -21,31 +21,17 @@ export BOOTSTRAP_VERSION="v3.11"
 export BOOTSTRAP_VERSION_APK_TOOLS="2.10.4-r3"
 
 export DEFAULT_VERSION="latest-stable"
-## All you need for a functional container. Package management is handled by the script, so having a package manager installed in the container isn't necessary.
-export DEFAULT_PACKAGES="busybox dumb-init"
+## Busybox and dumb-init are automatically added to all created containers. Package management is handled by the script, so having a package manager installed in the container isn't necessary.
+export DEFAULT_PACKAGES=""
 ## The minimum set of packages you need to build stuff in a container. You'll probably want more than this.
-#export DEFAULT_PACKAGES="alpine-base dumb-init alpine-sdk"
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk"
 ## The below list of packages is useful for developing containers or building stuff in them, but it's recommended that you use as few dependencies as possible for your finished container.
-#export DEFAULT_PACKAGES="alpine-base dumb-init alpine-sdk coreutils bash byobu htop curl wget nano busybox-extras python perl autoconf cmake automake libtool"
-
-## Default console width, works with basically all resoultions.
-export DEFAULT_CONSOLE_WIDTH="80"
-export DEFAULT_CONSOLE_HEIGHT="25"
-## Useful for developing containers, but often requires you to resize the console window.
-#export DEFAULT_CONSOLE_WIDTH="102"
-#export DEFAULT_CONSOLE_HEIGHT="38"
+#export DEFAULT_PACKAGES="alpine-base alpine-sdk coreutils bash byobu htop curl wget nano busybox-extras python perl autoconf cmake automake libtool"
 
 export DEFAULT_ARGS="sh -l"
 export DEFAULT_READ_ONLY_ROOT="false"
-
 export DEFAULT_MAX_MEM_MB="512"
-export DEFAULT_MAX_TMP_MEM_MB="128"
-
 export DEFAULT_ASSIGNED_CPUS="0-3"
-
-export DEFAULT_MAX_FILE_DESC="1024"
-export DEFAULT_MAX_THREADS="1024"
-export DEFAULT_MAX_PENDING_SIGNALS="8192"
 
 ## Note: The bootstrap and update process uses a shared cache, to reduce bandwidth usage when managing many containers.
 
@@ -161,7 +147,7 @@ get_settings () {
 	fi
 	export MIRROR
 
-	echo -n "Packages [$DEFAULT_PACKAGES]: "
+	echo -n "Additional packages [$DEFAULT_PACKAGES]: "
 	read PACKAGES
 	if [ -z "$PACKAGES" ]; then
 		export PACKAGES="$DEFAULT_PACKAGES"
@@ -202,48 +188,6 @@ get_settings () {
 		export MAX_MEM_MB="$DEFAULT_MAX_MEM_MB"
 	fi
 	export MAX_MEM_MB
-
-	echo -n "Max /tmp size (in MB) [$DEFAULT_MAX_TMP_MEM_MB]: "
-	read MAX_TMP_MEM_MB
-	if [ -z "$MAX_TMP_MEM_MB" ]; then
-		export MAX_TMP_MEM_MB="$DEFAULT_MAX_TMP_MEM_MB"
-	fi
-	export MAX_TMP_MEM_MB
-
-	echo -n "Max open files [$DEFAULT_MAX_FILE_DESC]: "
-	read MAX_FILE_DESC
-	if [ -z "$MAX_FILE_DESC" ]; then
-		export MAX_FILE_DESC="$DEFAULT_MAX_FILE_DESC"
-	fi
-	export MAX_FILE_DESC
-
-	echo -n "Max threads [$DEFAULT_MAX_THREADS]: "
-	read MAX_THREADS
-	if [ -z "$MAX_THREADS" ]; then
-		export MAX_THREADS="$DEFAULT_MAX_THREADS"
-	fi
-	export MAX_THREADS
-
-	echo -n "Max pending signals [$DEFAULT_MAX_PENDING_SIGNALS]: "
-	read MAX_PENDING_SIGNALS
-	if [ -z "$MAX_PENDING_SIGNALS" ]; then
-		export MAX_PENDING_SIGNALS="$DEFAULT_MAX_PENDING_SIGNALS"
-	fi
-	export MAX_PENDING_SIGNALS
-
-	echo -n "Console width [$DEFAULT_CONSOLE_WIDTH]: "
-	read CONSOLE_WIDTH
-	if [ -z "$CONSOLE_WIDTH" ]; then
-		export CONSOLE_WIDTH="$DEFAULT_CONSOLE_WIDTH"
-	fi
-	export CONSOLE_WIDTH
-
-	echo -n "Console height [$DEFAULT_CONSOLE_HEIGHT]: "
-	read CONSOLE_HEIGHT
-	if [ -z "$CONSOLE_HEIGHT" ]; then
-		export CONSOLE_HEIGHT="$DEFAULT_CONSOLE_HEIGHT"
-	fi
-	export CONSOLE_HEIGHT
 }
 
 get_update_settings () {
@@ -316,7 +260,7 @@ init_container () {
 	fi
 	echo "Installing container filesystem..."
 	mkdir -p $CACHE_DIR/apk-$FINAL_VERSION-$ARCH
-	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH --initdb add $PACKAGES
+	sudo $CACHE_DIR/bootstrap-$BOOTSTRAP_VERSION_APK_TOOLS-$ARCH/sbin/apk.static -q $MIRROR_CMD -U --allow-untrusted --root $CONTAINERS_DIR/$CONTAINER_NAME/rootfs --arch $ARCH --cache-dir $CACHE_DIR/apk-$FINAL_VERSION-$ARCH --initdb add busybox dumb-init $PACKAGES
 	if [ $? -eq 1 ]; then
 		echo "Unable to install chroot filesystem!"
 		exit
@@ -338,15 +282,15 @@ configure_container () {
 
 generate_config () {
 	let MAX_MEM=$MAX_MEM_MB*1000000
-	export MAX_TMP_MEM=$MAX_TMP_MEM_MB"m"
+	export MAX_TMP_MEM=$(($MAX_MEM_MB/2))"m"
 
 	echo "{
 		\"ociVersion\": \"1.0.1-dev\",
 		\"process\": {
 			\"terminal\": true,
 			\"consoleSize\": {
-				\"height\": $CONSOLE_HEIGHT,
-				\"width\": $CONSOLE_WIDTH
+				\"width\": 80,
+				\"height\": 25
 			},
 			\"user\": {
 				\"uid\": 0,
@@ -392,18 +336,18 @@ generate_config () {
 				},
 				{
 					\"type\": \"RLIMIT_NOFILE\",
-					\"hard\": $MAX_FILE_DESC,
-					\"soft\": $MAX_FILE_DESC
+					\"hard\": 2048,
+					\"soft\": 2048
 				},
 				{
 					\"type\": \"RLIMIT_NPROC\",
-					\"hard\": $MAX_THREADS,
-					\"soft\": $MAX_THREADS
+					\"hard\": 1024,
+					\"soft\": 1024
 				},
 				{
 					\"type\": \"RLIMIT_SIGPENDING\",
-					\"hard\": $MAX_PENDING_SIGNALS,
-					\"soft\": $MAX_PENDING_SIGNALS
+					\"hard\": 8192,
+					\"soft\": 8192
 				}
 			],
 			\"oomScoreAdj\": 1000,
@@ -515,7 +459,7 @@ generate_config () {
 					\"kerneltcp\": $MAX_MEM
 				},
 				\"pids\": {
-					\"limit\": $MAX_THREADS
+					\"limit\": 1024
 				},
 				\"devices\": [
 					{
