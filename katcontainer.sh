@@ -327,12 +327,13 @@ configure_container () {
 	echo "Finishing up..."
 	sudo mkdir -p root sys run
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
-	sudo -E bash -c 'printf "$DEFAULT_ARGS" > init.sh'
+        sudo -E bash -c 'printf "#!/bin/busybox sh\n$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
 	printf "$FINAL_VERSION" > ../.version
 	printf "$ARCH" > ../.arch
 	sudo -E bash -c 'printf alpine > etc/hostname'
 	sudo chown -hR 1000 $CONTAINERS_DIR/$CONTAINER_NAME/rootfs
+	sudo chmod +x init.sh
 }
 
 generate_config () {
@@ -353,7 +354,6 @@ generate_config () {
 			},
 			\"args\": [
 				\"/usr/bin/dumb-init\",
-				\"/bin/sh\",
 				\"/init.sh\"
 			],
 			\"env\": [
