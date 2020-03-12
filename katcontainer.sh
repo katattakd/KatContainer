@@ -352,9 +352,9 @@ generate_config () {
 				\"gid\": 0
 			},
 			\"args\": [
-				"/usr/bin/dumb-init",
-				"/bin/sh",
-				"/init.sh"
+				\"/usr/bin/dumb-init\",
+				\"/bin/sh\",
+				\"/init.sh\"
 			],
 			\"env\": [
 				\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",
