@@ -17,7 +17,6 @@ This script only works on Linux, and will likely require modifications to work o
 You will need the commands included in coreutils, along with the following:
 - bash (for running the script)
 - runc (for running containers)
-- arch-chroot (for running containers in chroot mode)
 - jq (for parsing OCI container configuration)
 - wget (for downloading dependencies the script requires)
 - sudo (for running some tasks as the root user)
