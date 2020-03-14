@@ -1,8 +1,5 @@
 #!/bin/sh
-### Note: You will need coreutils/busybox, bash, jq, runc, wget, sudo, arch-chroot, and tar to run this script.
-
 ### General configuration
-
 export CONTAINERS_DIR="$PWD/containers"
 export CONTAINER_NAME="$2"
 export CACHE_DIR="$PWD/cache"
@@ -10,11 +7,9 @@ export CACHE_DIR="$PWD/cache"
 export DEFAULT_ARCH="x86_64"
 
 ### Container management config
-
 export CONTAINER_ID="$CONTAINER_NAME-$((1 + RANDOM % 1000))"
 
 ### Container creation config
-
 ## Note: It's recommended that you set the mirror to the one with the lowest ping.
 export DEFAULT_MIRROR="http://dl-cdn.alpinelinux.org/alpine"
 export BOOTSTRAP_VERSION="v3.11"
@@ -90,9 +85,21 @@ chroot_container () {
 		echo "Unable to open container directory!"
 		exit
 	fi
-	echo "WARNING: You are running in chroot mode. Things may be a bit buggy, and the container has full access to the host system." 
+	echo "WARNING: You are running in chroot mode. The container has full unrestricted access to the host system!" 
 	echo "Running container \"$CONTAINER_NAME\"..."
-	sudo arch-chroot rootfs /bin/busybox sh
+	sudo mount --bind /dev rootfs/dev
+	sudo mount --bind /sys rootfs/sys
+	sudo mount --bind /proc rootfs/proc
+	sudo mount --bind /tmp rootfs/tmp
+	sudo mount --bind /run rootfs/run
+	sudo mount --bind / rootfs/mnt
+	sudo chroot rootfs /bin/busybox sh
+	sudo umount rootfs/dev
+	sudo umount rootfs/sys
+	sudo umount rootfs/proc
+	sudo umount rootfs/tmp
+	sudo umount rootfs/run
+	sudo umount rootfs/mnt
 }
 
 add_container () {
@@ -269,7 +276,7 @@ init_container () {
 
 configure_container () {
 	echo "Finishing up..."
-	sudo mkdir -p root sys run
+	sudo mkdir -p root sys run mnt
 	sudo -E bash -c 'printf "$MIRROR/$FINAL_VERSION/main\n$MIRROR/$FINAL_VERSION/community" > etc/apk/repositories'
         sudo -E bash -c 'printf "#!/bin/busybox sh\n$DEFAULT_ARGS" > init.sh'
 	printf "$MIRROR" > ../.mirror
