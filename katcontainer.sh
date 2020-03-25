@@ -66,10 +66,6 @@ get_container_settings () {
 	echo -n "Additional packages [none]: "
 	read PACKAGES
 
-	echo -n "Read-only root [false]: "
-	read READ_ONLY
-	[ -z "$READ_ONLY" ] && export READ_ONLY="false"
-
 	echo -n "Assigned CPUs [0-3]: "
 	read ASSIGNED_CPUS
 	[ -z "$ASSIGNED_CPUS" ] && export ASSIGNED_CPUS="0-3"
@@ -140,7 +136,7 @@ configure_container () {
 		\"ociVersion\": \"1.0.1\",
 		\"root\": {
 			\"path\": \"rootfs\",
-			\"readonly\": $READ_ONLY
+			\"readonly\": false
 		},
 		\"mounts\": [
 			{
