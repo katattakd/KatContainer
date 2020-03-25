@@ -7,7 +7,7 @@
 #	- jq (Required for creating or modifying containers.)
 #	- nano (Required for modifying containers.)
 
-# Warning: Do not move cache or container directories to machines with different CPU architectures. This can result in data loss.
+# Warning: Do not move cache or container directories to hosts with different CPU architectures. This can result in container packages becoming corrupted.
 
 # Storage directories
 export CONTAINER_DIR="$PWD/containers"
