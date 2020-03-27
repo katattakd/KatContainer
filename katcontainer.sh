@@ -16,6 +16,7 @@ export CACHE_DIR="$PWD/cache"
 # Package manager options
 export MIRROR="https://sjc.edge.kernel.org/alpine/" # Change this to your closest mirror.
 export DEFAULT_VERSION="latest-stable"
+export APK_FLAGS="-q --cache-max-age 360"
 
 # Bootstrap config (ignored if apk is installed)
 export BOOTSTRAP_VERSION="v3.11"
@@ -45,7 +46,7 @@ get_apk () {
 			cd "$CACHE_DIR/bootstrap"
 
 			echo "Downloading bootstrap apk-tools..."
-			curl -s "$MIRROR/$BOOTSTRAP_VERSION/main/$ARCH/apk-tools-static-$BOOTSTRAP_VERSION_APK.apk" | tar xzf - &> /dev/null
+			curl -sS "$MIRROR/$BOOTSTRAP_VERSION/main/$ARCH/apk-tools-static-$BOOTSTRAP_VERSION_APK.apk" | tar xzf - &> /dev/null
 
 			mv sbin/apk.static "$CACHE_DIR/bootstrap/apk-$BOOTSTRAP_VERSION_APK"
 			rm -r sbin
@@ -53,6 +54,16 @@ get_apk () {
 		fi
 		export APK="$CACHE_DIR/bootstrap/apk-$BOOTSTRAP_VERSION_APK"
 	fi
+	if [ ! -d "$CACHE_DIR/bootstrap/apk-keys" ]; then
+		mkdir -p "$CACHE_DIR/bootstrap/apk-keys"
+		cd "$CACHE_DIR/bootstrap/"
+
+		sudo $APK -X "$MIRROR/$BOOTSTRAP_VERSION/main" $APK_FLAGS -U --allow-untrusted --root "$CACHE_DIR/bootstrap" --cache-dir "$CACHE_DIR/apk-$BOOTSTRAP_VERSION" --initdb add alpine-keys
+
+		cp -r usr/share/apk/keys/* "$CACHE_DIR/bootstrap/apk-keys"
+		sudo rm -r dev etc lib proc tmp usr var
+	fi
+	export APK_FLAGS="$APK_FLAGS --keys-dir $CACHE_DIR/bootstrap/apk-keys"
 }
 
 # Get the settings for a new container.
@@ -102,7 +113,7 @@ init_container () {
 	[ "$VERSION" == "edge" ] && export MIRROR_STRING="$MIRROR_STRING -X $MIRROR/$VERSION/testing"
 
 	echo "Creating container filesystem..."
-	sudo $APK -q $MIRROR_STRING -U --allow-untrusted --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" --initdb add busybox dumb-init $PACKAGES
+	sudo $APK $MIRROR_STRING $APK_FLAGS -U --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" --initdb add busybox dumb-init $PACKAGES
 }
 
 # Update a container filesystem.
@@ -114,10 +125,10 @@ update_container () {
 	[ "$VERSION" == "edge" ] && export MIRROR_STRING="$MIRROR_STRING -X $MIRROR/$VERSION/testing"
 
 	echo "Updating container..."
-	sudo $APK -q $MIRROR_STRING -U --allow-untrusted --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" update
-	sudo $APK -q $MIRROR_STRING -U --allow-untrusted --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" upgrade
-	[ ! -z "$ADD_PACKAGES" ] && sudo $APK -q $MIRROR_STRING -U --allow-untrusted --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" add $ADD_PACKAGES
-	[ ! -z "$DEL_PACKAGES" ] && sudo $APK -q $MIRROR_STRING -U --allow-untrusted --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" del $DEL_PACKAGES
+	sudo $APK $MIRROR_STRING $APK_FLAGS --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" update
+	sudo $APK $MIRROR_STRING $APK_FLAGS --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" upgrade
+	[ ! -z "$ADD_PACKAGES" ] && sudo $APK $MIRROR_STRING $APK_FLAGS --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" add $ADD_PACKAGES
+	[ ! -z "$DEL_PACKAGES" ] && sudo $APK $MIRROR_STRING $APK_FLAGS --root "$CONTAINER_DIR/$CONTAINER_NAME/rootfs" --cache-dir "$CACHE_DIR/apk-$VERSION" del $DEL_PACKAGES
 
 	echo "$VERSION" > ../.version
 }
@@ -514,6 +525,8 @@ case "$COMMAND" in
 	"del")
 		check_container_name
 		del_container;;
+	"bequiet")
+		;; # Useful for making scripts based on KatContainer.
 	"help")
 		echo "help - Shows this menu"
 		echo "add [name] - Creates a container."
