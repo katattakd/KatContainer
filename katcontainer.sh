@@ -5,7 +5,6 @@
 #	- curl OR apk-tools (Required for bootstrapping containers, curl can be removed after apk-tools is cached.)
 #	- runc (Required for running sandboxed containers, containers can be run unsandboxed with the chroot command.)
 #	- jq (Required for creating or modifying containers.)
-#	- nano (Required for modifying containers.)
 
 # Warning: Do not move cache or container directories to hosts with different CPU architectures. This can result in container packages becoming corrupted.
 
@@ -16,7 +15,7 @@ export CACHE_DIR="$PWD/cache"
 # Package manager options
 export MIRROR="https://sjc.edge.kernel.org/alpine/" # Change this to your closest mirror.
 export DEFAULT_VERSION="latest-stable"
-export APK_FLAGS="-q --cache-max-age 360"
+export APK_FLAGS="--cache-max-age 360"
 
 # Bootstrap config (ignored if apk is installed)
 export BOOTSTRAP_VERSION="v3.11"
@@ -387,7 +386,7 @@ edit_container () {
 	cd "$CONTAINER_DIR/$CONTAINER_NAME"
 
 	cat "config.json" | jq --tab -M > "config.new.json"
-	nano "config.new.json"
+	editor "config.new.json"
 
 	set +e
 	cat "config.new.json" | jq -c > "config.new.fmt.json"
