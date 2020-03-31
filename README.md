@@ -18,10 +18,9 @@ This script only works on Linux, and will likely require modifications to work o
 ### Dependencies
 You will need the following dependencies to use the script.
 - coreutils, bash, sudo (for running the script)
-- curl / apk-tools (for creating containers)
+- curl or apk-tools (for creating containers)
 - runc (for running containers)
 - jq (for creating or editing containers)
-- nano (for editing containers)
 
 ### Usage
 You can run the script like so:
