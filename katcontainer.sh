@@ -386,7 +386,7 @@ edit_container () {
 	cd "$CONTAINER_DIR/$CONTAINER_NAME"
 
 	cat "config.json" | jq --tab -M > "config.new.json"
-	editor "config.new.json"
+	$EDITOR "config.new.json"
 
 	set +e
 	cat "config.new.json" | jq -c > "config.new.fmt.json"
